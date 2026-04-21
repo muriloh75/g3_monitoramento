@@ -432,17 +432,14 @@
                     jsPDF:        { unit: 'px', format: [larguraIdeal, alturaExata], orientation: 'portrait', hotfixes: ["px_scaling"] }
                 };
 
-                html2pdf().set(opcoes).from(chat).toPdf().get('pdf').then((pdf) => {
-    // Isso cria um link temporário com o PDF e abre em uma nova aba (pré-visualização)
-    window.open(pdf.output('bloburl'), '_blank');
-}).then(async () => {
-    chat.classList.remove('pdf-mode');
-    document.getElementById('loading-pdf').style.display = 'none';
-    if (deveLimpar) {
-        await deleteLocalData(fazendaSelecionadaId);
-        voltarAoMenu();
-    }
-}).catch(err => {
+                html2pdf().set(opcoes).from(chat).save().then(async () => {
+                    chat.classList.remove('pdf-mode');
+                    document.getElementById('loading-pdf').style.display = 'none';
+                    if (deveLimpar) {
+                        await deleteLocalData(fazendaSelecionadaId);
+                        voltarAoMenu();
+                    }
+                }).catch(err => {
                     alert("Erro ao gerar PDF: " + err);
                     chat.classList.remove('pdf-mode');
                     document.getElementById('loading-pdf').style.display = 'none';
