@@ -126,6 +126,12 @@
         .pdf-mode #relatorio-cabecalho p { margin: 5px 0 !important; font-size: 16px !important; color: #555; }
         
         .pdf-mode .item-container { margin: 0 auto 20px auto !important; width: 90% !important; align-items: flex-start !important; }
+		.pdf-mode .item-container { 
+    page-break-inside: avoid !important; /* Impede que o bloco seja cortado no meio da página */
+}
+.pdf-mode .secao { 
+    page-break-after: avoid !important; /* Evita que o título fique isolado na página anterior */
+}
         
         /* A MÁGICA AQUI: O container da SESSÃO é blindado para ficar no centro, anulando a ordem da esquerda */
         .pdf-mode .item-secao { align-items: center !important; }
@@ -402,50 +408,49 @@
         }
 
         function gerarRelatorioPDF(deveLimpar = false) {
-            document.getElementById('loading-text').textContent = 'Gerando Relatório Único...';
-            document.getElementById('loading-pdf').style.display = 'flex';
-            
-            const chat = document.getElementById('chat');
-            const fazendaData = FAZENDAS_CADASTRADAS.find(f => f.id === fazendaSelecionadaId);
-            
-            const hoje = new Date();
-            const dia = String(hoje.getDate()).padStart(2, '0');
-            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-            const ano = String(hoje.getFullYear()).slice(-2);
-            const nomeArquivo = `${fazendaData.nome} - ${dia}_${mes}_${ano}.pdf`;
+    document.getElementById('loading-text').textContent = 'Gerando Relatório...';
+    document.getElementById('loading-pdf').style.display = 'flex';
 
-            window.scrollTo(0, 0);
-            chat.scrollTop = 0;
+    const chat = document.getElementById('chat');
+    const fazendaData = FAZENDAS_CADASTRADAS.find(f => f.id === fazendaSelecionadaId);
+    
+    const hoje = new Date();
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const ano = String(hoje.getFullYear()).slice(-2);
+    const nomeArquivo = `${fazendaData.nome} - ${dia}_${mes}_${ano}.pdf`;
 
-            chat.classList.add('pdf-mode');
-            document.querySelectorAll('.controles-contextuais.active').forEach(el => el.classList.remove('active'));
+    window.scrollTo(0, 0);
+    chat.scrollTop = 0;
 
-            setTimeout(() => {
-                const alturaExata = chat.scrollHeight + 150;
-                const larguraIdeal = 800;
+    chat.classList.add('pdf-mode');
+    document.querySelectorAll('.controles-contextuais.active').forEach(el => el.classList.remove('active'));
 
-                const opcoes = {
-                    margin:       0, 
-                    filename:     nomeArquivo,
-                    image:        { type: 'jpeg', quality: 0.95 },
-                    html2canvas:  { scale: 2, useCORS: true, logging: false, scrollY: 0, windowWidth: larguraIdeal, windowHeight: alturaExata },
-                    jsPDF:        { unit: 'px', format: [larguraIdeal, alturaExata], orientation: 'portrait', hotfixes: ["px_scaling"] }
-                };
+    setTimeout(() => {
+        // Nova configuração otimizada para paginação A4 inteligente
+        const opcoes = {
+            margin:       [10, 10, 10, 10], // Margens de 10mm em todos os lados
+            filename:     nomeArquivo,
+            image:        { type: 'jpeg', quality: 0.95 },
+            html2canvas:  { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // Evita cortar imagens no meio
+        };
 
-                html2pdf().set(opcoes).from(chat).save().then(async () => {
-                    chat.classList.remove('pdf-mode');
-                    document.getElementById('loading-pdf').style.display = 'none';
-                    if (deveLimpar) {
-                        await deleteLocalData(fazendaSelecionadaId);
-                        voltarAoMenu();
-                    }
-                }).catch(err => {
-                    alert("Erro ao gerar PDF: " + err);
-                    chat.classList.remove('pdf-mode');
-                    document.getElementById('loading-pdf').style.display = 'none';
-                });
-            }, 500);
-        }
+        html2pdf().set(opcoes).from(chat).save().then(async () => {
+            chat.classList.remove('pdf-mode');
+            document.getElementById('loading-pdf').style.display = 'none';
+            if (deveLimpar) {
+                await deleteLocalData(fazendaSelecionadaId);
+                voltarAoMenu();
+            }
+        }).catch(err => {
+            alert("Erro ao gerar PDF: " + err);
+            chat.classList.remove('pdf-mode');
+            document.getElementById('loading-pdf').style.display = 'none';
+        });
+    }, 500);
+}
 
         function lerECortarImagem(file) {
             return new Promise((resolve) => {
