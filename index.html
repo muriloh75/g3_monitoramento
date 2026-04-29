@@ -152,6 +152,19 @@
         .pdf-mode .img-wrapper img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 8px !important; display: block !important; }
         .pdf-mode .img-wrapper:only-child { grid-column: span 2 !important; height: 350px !important; }
         .pdf-mode .btn-delete-img { display: none !important; }
+		body.pdf-ativo, 
+body.pdf-ativo #chat-screen {
+    height: auto !important; /* Remove a trava da altura da tela */
+    min-height: 100% !important;
+    overflow: visible !important;
+    display: block !important; /* Tira o flexbox que pode esmagar os itens */
+}
+
+/* Esconde as barras fixas de cima e de baixo durante a geração para não bugar o print */
+body.pdf-ativo .header, 
+body.pdf-ativo .input-area {
+    display: none !important;
+}
     </style>
 </head>
 <body>
@@ -423,33 +436,41 @@
     window.scrollTo(0, 0);
     chat.scrollTop = 0;
 
+    // 1. Libera as amarras do body e do chat-screen
+    document.body.classList.add('pdf-ativo'); 
     chat.classList.add('pdf-mode');
+    
     document.querySelectorAll('.controles-contextuais.active').forEach(el => el.classList.remove('active'));
 
     setTimeout(() => {
-        // Nova configuração otimizada para paginação A4 inteligente
         const opcoes = {
-            margin:       [10, 10, 10, 10], // Margens de 10mm em todos os lados
+            margin:       [10, 10, 10, 10], 
             filename:     nomeArquivo,
-            image:        { type: 'jpeg', quality: 0.95 },
-            html2canvas:  { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+            image:        { type: 'jpeg', quality: 0.90 }, // Levemente otimizado
+            // Reduzimos o scale de 2 para 1.5 para não estourar a memória RAM do celular
+            html2canvas:  { scale: 1.5, useCORS: true, logging: false, scrollY: 0 }, 
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // Evita cortar imagens no meio
+            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
         html2pdf().set(opcoes).from(chat).save().then(async () => {
+            // 2. Devolve o app ao estado normal
             chat.classList.remove('pdf-mode');
+            document.body.classList.remove('pdf-ativo');
             document.getElementById('loading-pdf').style.display = 'none';
+            
             if (deveLimpar) {
                 await deleteLocalData(fazendaSelecionadaId);
                 voltarAoMenu();
             }
         }).catch(err => {
             alert("Erro ao gerar PDF: " + err);
+            // Em caso de erro, garante que a tela volte ao normal também
             chat.classList.remove('pdf-mode');
+            document.body.classList.remove('pdf-ativo');
             document.getElementById('loading-pdf').style.display = 'none';
         });
-    }, 500);
+    }, 500); // 500ms dá tempo para o DOM redesenhar o body sem o height restrito
 }
 
         function lerECortarImagem(file) {
